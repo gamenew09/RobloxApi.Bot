@@ -1,0 +1,3 @@
+[submodule "RobloxAPI"]
+	path = RobloxAPI
+	url = https://github.com/gamenew09/RobloxAPI.git
