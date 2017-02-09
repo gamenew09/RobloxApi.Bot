@@ -101,9 +101,17 @@ namespace RobloxApi.Bot
 
         private async Task<User[]> GetFollowerPage(int page)
         {
-            JArray data = (JArray) await userData.ParseTokenFromURLResponse(string.Format("https://api.roblox.com/users/followers?userId={0}&page={1}", 
+            JArray data = await userData.ParseJArrayFromURLResponse(string.Format("https://api.roblox.com/users/followers?userId={0}&page={1}", 
                 _CurrentUser.ID, page));
-            return data.Value<User[]>(); // Does this work
+            List<User> users = new List<User>();
+            foreach(JToken token in data)
+            {
+                //User user = new User(token["Id"].Value<int?>() ?? -1);
+                //user._Username = token["Username"].Value<string>();
+
+                users.Add(await User.FromID(token["Id"].Value<int?>() ?? 0));
+            }
+            return users.ToArray(); // Does this work
         }
 
         public async Task<User[]> GetFollowers()
@@ -577,7 +585,7 @@ namespace RobloxApi.Bot
             return request;
         }
 
-        public async Task<JToken> ParseTokenFromURLResponse(string url)
+        public async Task<JToken> ParseJTokenFromURLResponse(string url)
         {
             HttpWebRequest request = CreateWebRequest(url);
 
@@ -588,6 +596,19 @@ namespace RobloxApi.Bot
                 data = await reader.ReadToEndAsync();
 
             return JToken.Parse(data);
+        }
+
+        public async Task<JArray> ParseJArrayFromURLResponse(string url)
+        {
+            HttpWebRequest request = CreateWebRequest(url);
+
+            HttpWebResponse resp = (HttpWebResponse)await request.GetResponseAsync();
+
+            string data;
+            using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
+                data = await reader.ReadToEndAsync();
+
+            return JArray.Parse(data);
         }
 
         public void SetCSRFTokenFromResponse(HttpWebResponse response)

@@ -19,25 +19,24 @@ namespace RobloxApi.Bot.Test
         {
             LoginFile file = GetLoginInformation();
 
-            ELoginResponse response;
-
-            User bUser = null;
-
-            using (BotUser user = new BotUser(file.Username))
+            Task.Run(async () =>
             {
-                Task<ELoginResponse> responseTask = user.Login(file.Password);
+                ELoginResponse response;
 
-                responseTask.Wait();
+                User bUser = null;
 
-                response = responseTask.Result;
+                using (BotUser user = new BotUser(file.Username))
+                {
+                    response = await user.Login(file.Password);
 
-                if (response == ELoginResponse.Success)
-                    bUser = user.CurrentUser;
-            }
+                    if (response == ELoginResponse.Success)
+                        bUser = user.CurrentUser;
+                }
 
-            Console.WriteLine("Response Result: {0} User: {1}", response, bUser);
+                Console.WriteLine("Response Result: {0} User: {1}", response, bUser);
 
-            Assert.IsTrue(response == ELoginResponse.Success);
+                Assert.IsTrue(response == ELoginResponse.Success);
+            }).Wait();
         }
 
         [TestMethod]
@@ -45,28 +44,46 @@ namespace RobloxApi.Bot.Test
         {
             LoginFile file = GetLoginInformation();
 
-            using (BotUser user = new BotUser(file.Username))
+            Task.Run(async () =>
             {
-                Task<ELoginResponse> responseTask = user.Login(file.Password);
+                using (BotUser user = new BotUser(file.Username))
+                {
+                    ELoginResponse response = await user.Login(file.Password);
 
-                responseTask.Wait();
+                    Assert.IsTrue(response == ELoginResponse.Success);
 
-                Assert.IsTrue(responseTask.Result == ELoginResponse.Success);
+                    User followingUser = await User.FromID(5762824);
 
-                Task<User> userTask = User.FromID(5762824);
+                    Assert.IsNotNull(followingUser);
 
-                userTask.Wait();
+                    bool isFollowing = await user.IsFollowing(followingUser);
 
-                Assert.IsNotNull(userTask.Result);
+                    Assert.IsTrue(isFollowing);
+                }
+            }).Wait();
+        }
 
-                User followingUser = userTask.Result;
+        [TestMethod]
+        public void BotGetFollowers()
+        {
+            LoginFile file = GetLoginInformation();
 
-                Task<bool> isFollowingTask = user.IsFollowing(followingUser);
+            Task.Run(async () =>
+            {
+                using (BotUser user = new BotUser(file.Username))
+                {
+                    ELoginResponse response = await user.Login(file.Password);
 
-                isFollowingTask.Wait();
+                    Assert.IsTrue(response == ELoginResponse.Success);
 
-                Assert.IsTrue(isFollowingTask.Result);
-            }
+                    User[] users = await user.GetFollowers();
+
+                    Assert.IsNotNull(users);
+                    Assert.IsTrue(users.Length > 0);
+
+                    Console.WriteLine("Follower Count: {0}", users.Length);
+                }
+            }).Wait();
         }
 
         [TestMethod]
