@@ -16,7 +16,7 @@ namespace RobloxApi.Bot
     public class BotUser : IDisposable
     {
 
-        BotUserData userData;
+        internal BotUserData userData;
 
         /// <summary>
         /// Constructor for BotUser specifying username to login as.
@@ -97,6 +97,11 @@ namespace RobloxApi.Bot
             {
                 return false;
             }
+        }
+
+        public SendPrivateMessage CreatePrivateMessage()
+        {
+            return new SendPrivateMessage(this);
         }
 
         private async Task<User[]> GetFollowerPage(int page)
@@ -551,6 +556,17 @@ namespace RobloxApi.Bot
         {
             Logout().Wait(); // Make sure we logout, this function does block as its called.
         }
+        
+        public async Task<PrivateMessage[]> GetPagedMessages(int page, EMessagesPage messageTab = EMessagesPage.Inbox, int pageSize = 20)
+        {
+            JObject obj = (JObject)await userData.ParseJTokenFromURLResponse(string.Format("https://www.roblox.com/messages/api/get-messages?messageTab={0}&pageNumber={1}&pageSize={2}", (int)messageTab, page, pageSize));
+            List<PrivateMessage> pms = new List<PrivateMessage>();
+            foreach (JToken token in obj.Value<JArray>("Collection"))
+                pms.Add(PrivateMessage.FromJObject((JObject)token, this));
+
+            return pms.ToArray();
+        }
+
     }
 
     public class UserIncomingItems
@@ -561,12 +577,36 @@ namespace RobloxApi.Bot
         public int FriendRequestsCount;
     }
 
-    class BotUserData
+    internal class BotUserData
     {
 
         public string LastCSRFToken;
 
         public CookieContainer CookieContainer;
+
+        /// <summary>
+        /// Gets the CSRF/XSRF token for the next request.
+        /// </summary>
+        /// <returns>CSRF/XSRF token</returns>
+        public async Task<string> GrabCSRFToken()
+        {
+            HttpWebRequest request = CreateWebRequest("https://www.roblox.com/home");
+
+            HttpWebResponse resp = (HttpWebResponse)await request.GetResponseAsync();
+
+            string data;
+            using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
+                data = await reader.ReadToEndAsync();
+
+            string xsrfTokenStart = "Roblox.XsrfToken.setToken('";
+
+            int startIndex = data.IndexOf(xsrfTokenStart) + xsrfTokenStart.Length;
+            int endIndex = data.Substring(startIndex).IndexOf("');"); // Make sure we find the ending "');" after the startIndex, not before.
+
+            LastCSRFToken = data.Substring(startIndex, endIndex);
+
+            return LastCSRFToken; // We could always remove this but who knows.
+        }
 
         public HttpWebRequest CreateWebRequest(string url)
         {
