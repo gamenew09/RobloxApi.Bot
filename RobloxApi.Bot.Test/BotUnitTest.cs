@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using RobloxApi;
 using System.Reflection;
 
+// Well RIP my bot code, as of 3/21/2017 ROBLOX has disabled the api.roblox.com/login/v1 endpoint. I might figure out another way, but I'm not sure about that.
+// I have fixed the bot code on 7/21/2017.
+
 namespace RobloxApi.Bot.Test
 {
     [TestClass]
@@ -12,7 +15,7 @@ namespace RobloxApi.Bot.Test
     {
         public LoginFile GetLoginInformation()
         {
-            return new LoginFile(@"H:\loginrbx.json");
+            return new LoginFile(TestConstants.LoginCredentialsPath);
         }
 
         [TestMethod]
@@ -28,7 +31,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.Login(file.Password);
+                    response = await user.LoginNew(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -53,7 +56,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.Login(file.Password);
+                    response = await user.LoginNew(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -88,7 +91,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.Login(file.Password);
+                    response = await user.LoginNew(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -97,7 +100,7 @@ namespace RobloxApi.Bot.Test
 
                     SendPrivateMessage msg = user.CreatePrivateMessage();
 
-                    msg.ReplyMessage = (PrivateMessage)1536131974; // Hardcoded for now, add a way to get sent, inbox, news, and archive messages.
+                    msg.ReplyMessage = (PrivateMessage)4952542723; // Hardcoded for now, add a way to get sent, inbox, news, and archive messages.
                     msg.IncludePreviousMessage = true;
 
                     msg.Recipient = (User)5762824; // We don't need to give all of the data for the user, just the ID.
@@ -126,7 +129,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.Login(file.Password);
+                    response = await user.LoginNew(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -157,7 +160,7 @@ namespace RobloxApi.Bot.Test
             {
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.Login(file.Password);
+                    ELoginResponse response = await user.LoginNew(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 
@@ -172,6 +175,33 @@ namespace RobloxApi.Bot.Test
             }).Wait();
         }
 
+        /*
+        [TestMethod]
+        public void BotAwardBadge()
+        {
+            LoginFile file = GetLoginInformation();
+
+            Task.Run(async () =>
+            {
+                using (BotUser user = new BotUser(file.Username))
+                {
+                    ELoginResponse response = await user.LoginNew(file.Password);
+
+                    Console.WriteLine(response);
+
+                    Assert.IsTrue(response == ELoginResponse.Success);
+
+                    bool s = await user.AwardBadgeTo(await User.FromID(85131845), // gamenew09test1
+                        await Asset.FromID(242299396), // Badge "Cakeour"
+                        await Asset.FromID(142878811)); // Place "Roblox Tower *Lobby 2 Released*"
+
+                    Assert.IsTrue(s);
+                }
+            }).Wait();
+        }
+        // Unfortunately awarding a Badge using the roblox api does not work. The AwardBadgeTo will be Obsolete.
+        */
+
         [TestMethod]
         public void BotGetFollowers()
         {
@@ -181,7 +211,7 @@ namespace RobloxApi.Bot.Test
             {
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.Login(file.Password);
+                    ELoginResponse response = await user.LoginNew(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 
@@ -204,7 +234,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.Login(file.Password);
+                    ELoginResponse response = await user.LoginNew(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 
@@ -226,7 +256,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.Login(file.Password);
+                    ELoginResponse response = await user.LoginNew(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 

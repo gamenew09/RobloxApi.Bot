@@ -20,14 +20,14 @@ namespace RobloxApi.Bot
     public class PrivateMessage
     {
 
-        public static explicit operator PrivateMessage(int messageId)
+        public static explicit operator PrivateMessage(long messageId)
         {
             PrivateMessage msg = new PrivateMessage(null);
             msg._ID = messageId;
             return msg;
         }
 
-        public static explicit operator int(PrivateMessage message)
+        public static explicit operator long(PrivateMessage message)
         {
             return message.ID;
         }
@@ -49,7 +49,7 @@ namespace RobloxApi.Bot
             return pm;
         }
 
-        internal int _ID;
+        internal long _ID;
         internal User _Recipient, _Sender;
         internal bool _IsRead, _IsReportAbuseDisplayed, _IsSystemMessage;
         internal DateTime _Created, _Updated;
@@ -58,7 +58,7 @@ namespace RobloxApi.Bot
         internal static PrivateMessage FromJObject(JObject obj, BotUser user)
         {
             PrivateMessage msg = new PrivateMessage(user);
-            msg._ID = obj.Value<int?>("Id") ?? 0;
+            msg._ID = obj.Value<long?>("Id") ?? 0;
 
             msg._Sender = new User(obj["Sender"]["UserId"].Value<int>(), obj["Sender"]["UserName"].Value<string>());
             msg._Recipient = new User(obj["Recipient"]["UserId"].Value<int>(), obj["Recipient"]["UserName"].Value<string>());
@@ -72,8 +72,6 @@ namespace RobloxApi.Bot
 
             string createdDT = obj.Value<string>("Created");
             string updatedDT = obj.Value<string>("Updated");
-            
-
             
             //Console.WriteLine(info.DateTimeFormat.AbbreviatedMonthNames[0]);
             msg._Created = GetDateTimeFromString(createdDT);
@@ -134,7 +132,7 @@ namespace RobloxApi.Bot
         /// <summary>
         /// The ID of the PrivateMessage.
         /// </summary>
-        public int ID
+        public long ID
         {
             get { return _ID; }
         }

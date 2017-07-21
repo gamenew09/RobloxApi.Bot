@@ -18,7 +18,7 @@ namespace RobloxApi.Bot.Test
         /// 
         /// <para>The reason why you provide a file is to prevent an accidental leak of user info. I would strongly not recommend you put this file within the project folder.</para>
         /// </summary>
-        public const string LoginCredentialsPath = "";
+        public const string LoginCredentialsPath = @"H:\loginrbx.json";
 
     }
 }

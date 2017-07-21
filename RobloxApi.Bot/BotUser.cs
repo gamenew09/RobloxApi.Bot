@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using HtmlAgilityPack;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RobloxApi;
 using System;
@@ -436,8 +437,88 @@ namespace RobloxApi.Bot
             }
         }
 
+        [Obsolete("Always returns false since 403 is given on request.")]
+        public async Task<bool> AwardBadgeTo(User user, Asset badge, Asset place)
+        {
+            HttpWebRequest request = userData.CreateWebRequest("https://api.roblox.com/assets/award-badge");
+
+            ASCIIEncoding ascii = new ASCIIEncoding();
+            byte[] formBytes = ascii.GetBytes(string.Format("userId={0}&badgeId={1}&placeId={2}", user.ID, badge.ID, place.ID));
+
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = formBytes.Length;
+
+            // add post data to request
+            Stream postStream = request.GetRequestStream();
+            postStream.Write(formBytes, 0, formBytes.Length);
+            postStream.Flush();
+            postStream.Close();
+
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+
+                string data;
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    data = await reader.ReadToEndAsync();
+
+                string owner = "";
+
+                if (badge.UserCreator != null)
+                    owner = badge.UserCreator.Username;
+                else if (badge.GroupCreator != null)
+                    owner = badge.GroupCreator.Name;
+                else
+                    return false;
+
+                if(data.Contains(string.Format("{0} won {1}'s \"{2}\" award!", user.Username, owner, badge.Name)))
+                {
+                    return true;
+                }
+            }
+            catch(WebException ex)
+            {
+                string data;
+                using (var reader = new StreamReader(ex.Response.GetResponseStream()))
+                    data = await reader.ReadToEndAsync();
+            }
+
+            return false;
+        }
+
+        async Task GetUserLoggedIn()
+        {
+            HttpWebRequest request = userData.CreateWebRequest("https://www.roblox.com/Home");
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+
+                string data;
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    data = await reader.ReadToEndAsync();
+                HtmlDocument doc = new HtmlDocument();
+                doc.LoadHtml(data);
+
+                HtmlNode node = doc.GetElementbyId("nav-profile");
+                string url = node.GetAttributeValue("href", "");
+
+                // https://www.roblox.com/users/85131845/profile
+                // 29
+
+                string id = url.Substring(29);
+                id = id.Substring(0, id.IndexOf('/'));
+
+                _CurrentUser = await User.FromID(int.Parse(id));
+
+                _LoggedIn = true;
+            }
+            catch { }
+        }
+
         /// <summary>
         /// Logs in as the value of <see cref="Username"/> with the password provided.
+        /// 
         /// </summary>
         /// <param name="password">The password to login with.</param>
         /// <returns>The result of the login.</returns>
@@ -445,9 +526,130 @@ namespace RobloxApi.Bot
         {
             userData = new Bot.BotUserData();
             userData.CookieContainer = new CookieContainer();
+            userData.LastCSRFToken = await userData.GrabCSRFToken(); // Do we need this
+            
+
+            // 302 Found: Successful Login?
+            // We should also have a .ROBLOSECURITY cookie.
+
+            HttpWebRequest request = userData.CreateWebRequest("https://www.roblox.com/newlogin");
+            ASCIIEncoding ascii = new ASCIIEncoding();
+            byte[] formBytes = ascii.GetBytes(string.Format("username={0}&password={1}&IdentificationCode=", Uri.EscapeDataString(Username), Uri.EscapeDataString(password)));
+
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = formBytes.Length;
+
+            request.AllowAutoRedirect = false;
+
+            // add post data to request
+            Stream postStream = request.GetRequestStream();
+            postStream.Write(formBytes, 0, formBytes.Length);
+            postStream.Flush();
+            postStream.Close();
+
+            string data = "";
+
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    data = await reader.ReadToEndAsync();
+
+                Cookie[] cookie = new Cookie[response.Cookies.Count];
+                response.Cookies.CopyTo(cookie, 0);
+                if (cookie.Where((x) => x.Name == ".ROBLOSECURITY").Count() > 0)
+                {
+                    // We are logged in set the CurrentUser property!
+
+                    await GetUserLoggedIn(); // Make sure we get the user currently logged in.
+
+                    return ELoginResponse.Success;
+                }
+            }
+            catch (WebException ex)
+            {
+                HttpWebResponse response = (HttpWebResponse)ex.Response;
+
+                /*
+                if (response.StatusCode == HttpStatusCode.Forbidden) // Generic ROBLOX login error, get the error type then return.
+                {
+                    string data;
+                    using (var reader = new StreamReader(response.GetResponseStream()))
+                    {
+                        data = await reader.ReadToEndAsync();
+                    }
+                    Console.WriteLine(data);
+                    JObject jobj = JObject.Parse(data);
+
+                    switch (jobj.Value<string>("message"))
+                    {
+                        case "Captcha":
+                            return ELoginResponse.Captcha;
+                        case "Credentials":
+                            return ELoginResponse.InvalidCredentials;
+                        case "Privileged":
+                            return ELoginResponse.PrivilegedUser;
+                        case "TwoStepVerification":
+                            return ELoginResponse.TwoStepVerification;
+                        case "PasswordResetRequired":
+                            return ELoginResponse.PasswordResetRequired;
+                        case "TooManyAttempts":
+                            return ELoginResponse.TooManyAttempts;
+                    }
+                }
+                else if (response.StatusCode == HttpStatusCode.BadRequest) // Bad Request will default to InvalideCredentials, could always use a different enumeration.
+                {
+                    return ELoginResponse.InvalidCredentials;
+                }
+                */
+
+                if (response.StatusCode == HttpStatusCode.NotFound) // Did the endpoint 404? Assume ROBLOX disabled the endpoint.
+                {
+                    return ELoginResponse.EndpointDisabled;
+                }
+            }
+
+            try
+            {
+                HtmlDocument doc = new HtmlDocument();
+                doc.LoadHtml(data);
+
+                HtmlNode validationErrors = doc.GetElementbyId("loginForm").ChildNodes.Where((n) => n.GetAttributeValue("class", null) == "validation-summary-errors").First().FirstChild;
+
+                foreach (HtmlNode node in validationErrors.ChildNodes)
+                {
+                    string text = node.InnerText;
+
+                    // TODO: Figure out error text for Captchas and Two-Step Verification.
+
+                    if (text == "Your username or password is incorrect. Please check them and try again.")
+                    {
+                        return ELoginResponse.InvalidCredentials;
+                    }
+                }
+            }
+            catch { }
+
+            return ELoginResponse.ServerError; // It's just a server error.
+        }
+
+        /*
+        /// <summary>
+        /// Logs in as the value of <see cref="Username"/> with the password provided.
+        /// This should no longer be used. This function when used will cause C# not to compile.
+        /// </summary>
+        /// <param name="password">The password to login with.</param>
+        /// <returns>The result of the login.</returns>
+        [Obsolete("ROBLOX has disabled the endpoint that this method uses. Use Login, method will renamed soon.", true)]
+        public async Task<ELoginResponse> LoginOld(string password)
+        {
+            userData = new Bot.BotUserData();
+            userData.CookieContainer = new CookieContainer();
             userData.LastCSRFToken = "";
 
-            HttpWebRequest request = userData.CreateWebRequest("https://api.roblox.com/login/v1");
+            HttpWebRequest request = userData.CreateWebRequest("https://api.roblox.com/login/v2");
 
             ASCIIEncoding ascii = new ASCIIEncoding();
             byte[] formBytes = ascii.GetBytes(string.Format("username={0}&password={1}", Uri.EscapeDataString(Username), Uri.EscapeDataString(password)));
@@ -521,6 +723,7 @@ namespace RobloxApi.Bot
 
             return ELoginResponse.ServerError; // It's just a server error.
         }
+        */
 
         /// <summary>
         /// Logs the current user out.
@@ -543,7 +746,7 @@ namespace RobloxApi.Bot
 
                 switch(response.StatusCode)
                 {
-                    case HttpStatusCode.Forbidden:
+                    case HttpStatusCode.Forbidden: // Csrf token failed, get a new one then logout.
                         userData.SetCSRFTokenFromResponse(response);
                         return await Logout();
                     default:
