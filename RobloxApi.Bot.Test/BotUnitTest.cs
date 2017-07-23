@@ -31,7 +31,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.LoginNew(file.Password);
+                    response = await user.Login(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -56,7 +56,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.LoginNew(file.Password);
+                    response = await user.Login(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -91,7 +91,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.LoginNew(file.Password);
+                    response = await user.Login(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -129,7 +129,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    response = await user.LoginNew(file.Password);
+                    response = await user.Login(file.Password);
 
                     if (response == ELoginResponse.Success)
                         bUser = user.CurrentUser;
@@ -160,7 +160,7 @@ namespace RobloxApi.Bot.Test
             {
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.LoginNew(file.Password);
+                    ELoginResponse response = await user.Login(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 
@@ -185,7 +185,7 @@ namespace RobloxApi.Bot.Test
             {
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.LoginNew(file.Password);
+                    ELoginResponse response = await user.Login(file.Password);
 
                     Console.WriteLine(response);
 
@@ -203,6 +203,42 @@ namespace RobloxApi.Bot.Test
         */
 
         [TestMethod]
+        public void BotBlockUser()
+        {
+            LoginFile file = GetLoginInformation();
+
+            Task.Run(async () =>
+            {
+                using (BotUser user = new BotUser(file.Username))
+                {
+                    ELoginResponse response = await user.Login(file.Password);
+
+                    Assert.IsTrue(response == ELoginResponse.Success);
+
+                    Assert.IsTrue(await user.Block((User)341044272));
+                }
+            }).Wait();
+        }
+
+        [TestMethod]
+        public void BotUnBlockUser()
+        {
+            LoginFile file = GetLoginInformation();
+
+            Task.Run(async () =>
+            {
+                using (BotUser user = new BotUser(file.Username))
+                {
+                    ELoginResponse response = await user.Login(file.Password);
+
+                    Assert.IsTrue(response == ELoginResponse.Success);
+
+                    Assert.IsTrue(await user.Unblock((User)341044272));
+                }
+            }).Wait();
+        }
+
+        [TestMethod]
         public void BotGetFollowers()
         {
             LoginFile file = GetLoginInformation();
@@ -211,7 +247,7 @@ namespace RobloxApi.Bot.Test
             {
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.LoginNew(file.Password);
+                    ELoginResponse response = await user.Login(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 
@@ -234,7 +270,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.LoginNew(file.Password);
+                    ELoginResponse response = await user.Login(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 
@@ -256,7 +292,7 @@ namespace RobloxApi.Bot.Test
 
                 using (BotUser user = new BotUser(file.Username))
                 {
-                    ELoginResponse response = await user.LoginNew(file.Password);
+                    ELoginResponse response = await user.Login(file.Password);
 
                     Assert.IsTrue(response == ELoginResponse.Success);
 

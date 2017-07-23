@@ -635,6 +635,80 @@ namespace RobloxApi.Bot
             return ELoginResponse.ServerError; // It's just a server error.
         }
 
+        /// <summary>
+        /// Blocks the user from communicating with the bot.
+        /// </summary>
+        /// <param name="user">The user to block</param>
+        /// <returns>Did blocking succced.</returns>
+        public async Task<bool> Block(User user)
+        {
+            await userData.GrabCSRFToken();
+            HttpWebRequest request = userData.CreateWebRequest("https://api.roblox.com/userblock/block");
+
+            ASCIIEncoding ascii = new ASCIIEncoding();
+            byte[] formBytes = ascii.GetBytes(string.Format("userId={0}", Uri.EscapeDataString(user.ID.ToString())));
+
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = formBytes.Length;
+
+            // add post data to request
+            Stream postStream = request.GetRequestStream();
+            postStream.Write(formBytes, 0, formBytes.Length);
+            postStream.Flush();
+            postStream.Close();
+
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+
+                string data;
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    data = await reader.ReadToEndAsync();
+
+                JObject json = JObject.Parse(data);
+                return json["success"].ToObject<bool>();
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Unblocks the user.
+        /// </summary>
+        /// <param name="user">The user to unblock</param>
+        /// <returns>Did unblocking succeed?</returns>
+        public async Task<bool> Unblock(User user)
+        {
+            await userData.GrabCSRFToken();
+            HttpWebRequest request = userData.CreateWebRequest("https://api.roblox.com/userblock/unblock");
+
+            ASCIIEncoding ascii = new ASCIIEncoding();
+            byte[] formBytes = ascii.GetBytes(string.Format("userId={0}", Uri.EscapeDataString(user.ID.ToString())));
+
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = formBytes.Length;
+
+            // add post data to request
+            Stream postStream = request.GetRequestStream();
+            postStream.Write(formBytes, 0, formBytes.Length);
+            postStream.Flush();
+            postStream.Close();
+
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+
+                string data;
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    data = await reader.ReadToEndAsync();
+
+                JObject json = JObject.Parse(data);
+                return json["success"].ToObject<bool>();
+            }
+            catch { return false; }
+        }
+
         /*
         /// <summary>
         /// Logs in as the value of <see cref="Username"/> with the password provided.
@@ -879,7 +953,7 @@ namespace RobloxApi.Bot
         /// </summary>
         InvalidCredentials,
         /// <summary>
-        /// The user being logged into is block from using the api.roblox.com/login/v1 endpoint.
+        /// The user being logged into is blocked from using the api.roblox.com/login/v1 endpoint.
         /// </summary>
         PrivilegedUser,
         /// <summary>

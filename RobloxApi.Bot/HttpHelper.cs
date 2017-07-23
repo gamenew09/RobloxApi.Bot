@@ -26,6 +26,35 @@ namespace RobloxApi.Bot
             });
         }
 
+        public static async Task<string> PostAndGetStringFromURL(string url, Dictionary<string, string> formParams)
+        {
+            var request = (HttpWebRequest)HttpWebRequest.Create("https://api.roblox.com/users/online-status");
+
+            string postData = "";
+            foreach (KeyValuePair<string, string> formDataKeyVal in formParams)
+            {
+                postData += string.Format("{0}={1}&", formDataKeyVal.Key, formDataKeyVal.Value);
+            }
+            postData = postData.TrimEnd('&');
+            var pdata = Encoding.ASCII.GetBytes(postData);
+
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.ContentLength = pdata.Length;
+            request.UserAgent = "CSharp.RobloxAPI";
+
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(pdata, 0, pdata.Length);
+            }
+            WebResponse resp = await request.GetResponseAsync();
+
+            string data;
+            using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
+                data = await reader.ReadToEndAsync();
+            return data;
+        }
+
         /// <summary>
         /// Gets a string response from the url provided.
         /// </summary>
